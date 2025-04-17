@@ -1,0 +1,22 @@
+.DS_Store
+.idea
+*.log
+tmp/
+
+# Build artifacts
+build/
+!build/.gitkeep
+
+# NASM output
+*.bin
+*.img
+*.lst
+*.map
+
+# Backup and swap files
+*~
+*.swp
+*.swo
+
+# Core dumps
+core
