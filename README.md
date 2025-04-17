@@ -35,6 +35,13 @@ Entire bootloader fits into a 512-byte boot sector.
 
 The bootloader image can be loaded from a `.img` file or hard disk image.
 
+## Testing the img file generated
+
+```bash
+qemu-system-x86_64 -drive format=raw,file=build/main.img
+```
+
+
 ## Members 
 - Brendan Lauterborn
 - Luis Glascon
@@ -42,3 +49,4 @@ The bootloader image can be loaded from a `.img` file or hard disk image.
 - Dheeraj Ganti
 - Joseph Frishkorn
 - Abdulaziz Aladdad
+
