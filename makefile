@@ -3,6 +3,8 @@ ASM=nasm
 SRC_DIR=src
 BUILD_DIR=build
 
+all: run
+
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
