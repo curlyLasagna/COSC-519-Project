@@ -9,18 +9,22 @@ start:
     mov ss, ax
     mov sp, 0x7C00
 
-    ; Load 16 sectors (8KB) starting at sector 2 into 0x8000
-    mov ah, 0x02         ; BIOS read
-    mov al, 16           ; number of sectors to read (matching 8192 bytes)
-    mov ch, 0            ; cylinder
-    mov cl, 2            ; sector number (starts from 2)
-    mov dh, 0            ; head
-    mov dl, 0x80         ; boot drive
-    mov bx, 0x8000       ; load address
+    ; Load 16 sectors from disk (starting at sector 2)
+    mov ah, 0x02
+    mov al, 16
+    mov ch, 0
+    mov cl, 2
+    mov dh, 0
+    mov dl, 0x80
+    mov bx, 0x8000
     int 0x13
+    jc disk_error
 
-    ; Jump to stage2 code
     jmp 0x0000:0x8000
 
+disk_error:
+    cli
+    hlt
+
 times 510 - ($ - $$) db 0
-dw 0xAA55
+    dw 0xAA55
