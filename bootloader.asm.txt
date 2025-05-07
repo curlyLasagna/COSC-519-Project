@@ -89,7 +89,7 @@ long_mode:
 .done:
     hlt
 
-msg db 'Entered Long Mode: Group 3', 0
+msg db 'Entered Long Mode: Group 1', 0
 
 align 8
 pt1: dq 0x0000000000000083
