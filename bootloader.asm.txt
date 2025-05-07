@@ -1,0 +1,113 @@
+[BITS 16]
+ORG 0x7C00
+
+start:
+    cli
+    xor ax, ax
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+    mov sp, 0x7C00
+
+    ; Copy stage2 code embedded below into 0x8000
+    mov si, stage2_start
+    mov di, 0x8000
+    mov cx, stage2_end - stage2_start
+    rep movsb
+
+    jmp 0x0000:0x8000
+
+; Boot signature
+times 510 - ($ - $$) db 0
+dw 0xAA55
+
+; ===== Embedded Stage 2 Code =====
+stage2_start:
+
+[BITS 16]
+    cli
+    xor ax, ax
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+    mov sp, 0x9000
+
+    lgdt [gdt_descriptor]
+
+    mov eax, cr0
+    or eax, 1
+    mov cr0, eax
+
+    jmp 08h:protected_mode
+
+[BITS 32]
+protected_mode:
+    mov ax, 10h
+    mov ds, ax
+    mov ss, ax
+    mov esp, 0x90000
+
+    ; Enable PAE
+    mov eax, cr4
+    or eax, 1 << 5
+    mov cr4, eax
+
+    ; Page tables (identity map)
+    mov dword [pt1], 0x00000083
+    mov dword [pt2], 0x20000083
+
+    mov eax, pdpt
+    mov cr3, eax
+
+    ; Enable Long Mode (EFER.LME)
+    mov ecx, 0xC0000080
+    rdmsr
+    or eax, 0x100
+    wrmsr
+
+    ; Enable Paging
+    mov eax, cr0
+    or eax, 0x80000000
+    mov cr0, eax
+
+    jmp 08h:long_mode
+
+[BITS 64]
+long_mode:
+    mov rax, 0x123456789ABCDEF0
+    mov rbx, msg
+
+.print:
+    mov al, [rbx]
+    test al, al
+    jz .done
+    mov ah, 0x0E
+    int 0x10
+    inc rbx
+    jmp .print
+
+.done:
+    hlt
+
+msg db 'Entered Long Mode: Group 3', 0
+
+align 8
+pt1: dq 0x0000000000000083
+pt2: dq 0x0000000000200083
+
+align 8
+gdt:
+    dq 0x0000000000000000
+    dq 0x00af9a000000ffff
+    dq 0x00cf92000000ffff
+
+gdt_descriptor:
+    dw gdt_descriptor_end - gdt - 1
+    dd gdt
+
+gdt_descriptor_end:
+pdpt:
+    dq pt1
+    times 3 dq 0
+
+stage2_end:
