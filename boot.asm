@@ -1,5 +1,5 @@
-; BIOS boot origin
-org 0x7c00  
+; Fixed address in real mode. Conventionally for the boot sector
+org 0x7c00
 main:
 
     ; SETTING UP STACK
@@ -34,7 +34,11 @@ switch_to_pm:
     cli
 
     ;==============================================================================
-    ;PREPARING TO ENTER PROTECTED MODE 
+    ;PREPARING TO ENTER PROTECTED MODE: https://wiki.osdev.org/Protected_Mode 
+    ;Prerequisites for switching over to protected mode:
+    ;- Disable interrupts
+    ;- Enable A20 line
+    ;- Load the Global Descriptor Table
 
     ; Loading DT for 32 bit
     lgdt [GDT32.Pointer] 
@@ -42,10 +46,12 @@ switch_to_pm:
 
     ; Changing CR0 bit to represent the shift to protected mode
     mov eax, cr0
-    or eax, 0x1 ;
+    or eax, 0x1 
+    ; Set Protection Enable bit in CR0
     mov cr0, eax
 
     ; Enable A20 line: https://wiki.osdev.org/A20_Line#Fast_A20_Gate
+    ;  
     in al, 0x92
     or al, 2
     out 0x92, al
@@ -183,14 +189,14 @@ ProtectedModeCode:
 
 switch_to_long_mode:
 
-    call setup_paging               ; Sets up Paging        
+    call setup_paging               ;Sets up Paging        
 
     lgdt [GDT64.Pointer]            ;Loads 64 bit GDT table
 
     ;==============================================================================
     ;ENTERS LONG MODE 
 
-    jmp GDT64.Code:RealModeCode; Jumps to 64 bit code
+    jmp GDT64.Code:LongModeCode; Jumps to 64 bit code
 
 
 [ BITS 64 ]
@@ -205,7 +211,7 @@ print64:
         lodsb
         or al,al
         cmp r9, r10
-        je doneee64
+        je done
 
         or rax,0x0f00
         mov qword [rbx], rax
@@ -214,11 +220,11 @@ print64:
         add r9, 1 ; Print Counter Update
         jmp print64_loop
 
-    doneee64:
+    done:
         ret
 
 
-RealModeCode:
+LongModeCode:
 
     ; Setting up all the segment value                     
     mov ax, GDT64.Data
@@ -239,5 +245,6 @@ MSG_3 db "Hello professor! From: Luis, Brendan, Giancarlo, Dheeraj, Joseph, Abdu
 
 
 times 510 - ($-$$) db 0 
+; Place magic boot number to allow BIOS to assume the sector is bootable
 dw 0xaa55
 
