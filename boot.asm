@@ -7,42 +7,8 @@ main:
     mov bp, 0x9000
     mov sp, bp
 
-    ; PRINTING in 16 BIT MODE
-    ; mov bx, MSG_1
-    ; call print16
-
     call switch_to_pm
 
-[ BITS 16 ]
-; ===== Begin print16.nasm =====
-print16:
-    pusha 
-    
-    mov ah, 0x0e
-
-    print_loop:
-        mov al, [bx] 
-        
-        cmp al, 0  ; loop til al == 0; then ends. 
-        je return_back
-
-        int 0x10 ; if al != 0; then print
-        
-        add bx, 1 ; i++
-        jmp print_loop
-
-    return_back:
-        ; printing '\n'
-        
-        mov al, 0x0a 
-        int 0x10
-        mov al, 0x0d 
-        int 0x10
-
-        
-        popa
-        ret
-; ===== End print16.nasm =====
 
 ; ===== Begin gdt32.nasm =====
 ; Setting up GDT for 32 BIT MODE
@@ -86,12 +52,6 @@ switch_to_pm:
 
     jmp GDT32.Code:ProtectedModeCode
 
-
-[ BITS 32 ]
-; ===== Begin print32.nasm =====
-[bits 32]
-
-print32:
 
     pusha
     mov edx, edi
@@ -238,11 +198,6 @@ ProtectedModeCode:
     mov ax, GDT32.Data
     call set_seg_register
 
-    ; Printing in Protected Mode
-    ; mov edi, 0xb8000
-    ; mov ebx, MSG_2
-    ; call print32
-
     jmp switch_to_long_mode
 
 
@@ -286,13 +241,6 @@ print64:
     doneee64:
         ret
 ; ===== End print64.nasm =====
-
-; ===== Begin print_register.nasm =====
-; It prints the value of R9 REGISTER in Long Mode
-; RBX: Position to print the content of CR3
-; R9 contains the value.
-
-print_register:
 
 	mov rcx, 63 ; number of bits
 
@@ -348,29 +296,14 @@ RealModeCode:
     mov ax, GDT64.Data
     call set_seg_register          
 
-
-    ; CLEARS SCREEN
-    ; PRINTS "Entered Long Mode: Group 1"
     mov rbx, 0xb8000
     mov rsi, MSG_3
     mov r10, 2000
     call print64
 
-    ; PRINTING THE CONTENT OF REGISTER cr3
-    mov rbx, 0xb8500 ; Starting printing postion in Video Buffer
-    mov r9, cr3
-    call print_register
-    
     mov rax, [0x00000043]
     hlt
 
-
-;MSG_2 db "In protected mode",0
-;MSG_1 db "In real", 0
-;MSG_3 db "Entered Long Mode Group 1"
-
-;MSG_REAL db "In real", 0
-;MSG_PROT db "In protected mode", 0
 MSG_3 db "Entered Long Mode Group 1", 0
 
 
