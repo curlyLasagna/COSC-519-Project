@@ -1,7 +1,7 @@
-all:
+build:
 	nasm -f bin boot.asm -o boot.img
 
-run: all
+run: build
 	qemu-system-x86_64 -drive format=raw,file=boot.img
 
 clean:
