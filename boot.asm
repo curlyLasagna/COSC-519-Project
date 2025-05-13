@@ -1,6 +1,5 @@
-org 0x7c00 ; BIOS boot origin 
-; TODO: See where to disable to interrupts
-; TODO: See where to do things with A10
+; BIOS boot origin
+org 0x7c00  
 main:
 
     ; SETTING UP STACK
@@ -9,8 +8,8 @@ main:
 
     call switch_to_pm
 
+[ BITS 16 ]
 
-; ===== Begin gdt32.nasm =====
 ; Setting up GDT for 32 BIT MODE
 GDT32:
 
@@ -28,8 +27,6 @@ GDT32:
     .Pointer:                    
         dw $ - GDT32 - 1             
         dd GDT32
-; ===== End gdt32.nasm =====
-
 
 
 switch_to_pm:
@@ -42,39 +39,24 @@ switch_to_pm:
     ; Loading DT for 32 bit
     lgdt [GDT32.Pointer] 
 
+
     ; Changing CR0 bit to represent the shift to protected mode
     mov eax, cr0
     or eax, 0x1 ;
     mov cr0, eax
 
+    ; Enable A20 line: https://wiki.osdev.org/A20_Line#Fast_A20_Gate
+    in al, 0x92
+    or al, 2
+    out 0x92, al
     ;==============================================================================
     ;ENTERS PROTECTED MODE 
 
     jmp GDT32.Code:ProtectedModeCode
 
 
-    pusha
-    mov edx, edi
-    mov ah, 0x0f
+[ BITS 32 ]
 
-    print32_loop:
-        mov al, [ebx]
-
-        cmp al, 0
-        je doneee
-
-        mov [edx], ax
-        add ebx, 1
-        add edx, 2
-
-        jmp print32_loop
-
-    doneee:
-        popa
-        ret
-; ===== End print32.nasm =====
-
-; ===== Begin gdt64.nasm =====
 ; GDT for 64 BIT MODE
 ; Reference: https://wiki.osdev.org/Setting_Up_Long_Mode#Entering_the_64-bit_Submode
 GDT64: 
@@ -105,9 +87,7 @@ GDT64:
         ; Limit
         dq GDT64
         ; Base
-; ===== End gdt64.nasm =====
 
-; ===== Begin set_seg_register.nasm =====
 ; ax containes the values to be repeated in all other segment register
 set_seg_register:
     mov ds, ax                    
@@ -115,9 +95,7 @@ set_seg_register:
     mov gs, ax
     mov ss, ax
     ret
-; ===== End set_seg_register.nasm =====
 
-; ===== Begin paging.nasm =====
 ; RESOURCES: https://wiki.osdev.org/Setting_Up_Long_Mode#Setting_up_the_Paging
 
 setup_paging:
@@ -189,7 +167,6 @@ setup_paging:
     mov cr0, edi
 
     ret
-; ===== End paging.nasm =====
 
 
 ProtectedModeCode:
@@ -217,7 +194,6 @@ switch_to_long_mode:
 
 
 [ BITS 64 ]
-; ===== Begin print64.nasm =====
 ; Printing in 64 Bit Mode
 ; RSI - INPUT
 ; r10 - number of values
@@ -240,54 +216,6 @@ print64:
 
     doneee64:
         ret
-; ===== End print64.nasm =====
-
-	mov rcx, 63 ; number of bits
-
-	printing_loop:
-		mov rax, r9
-		cmp rcx, 0
-		je end_print_register
-
-		mov rdx, 0
-		for:
-			; right shift cr3 `rcx times`. 
-			; aim: to print cr3 register value in proper order 63rd, 62nd..
-			; endian stuffs :(
-			cmp rdx, rcx
-			je end_for
-			
-			shr rax, 1
-			add rdx, 1
-			
-			jmp for
-		end_for:
-		
-		; extracting just one last bit aftering shifting
-		and rax, 1
-
-		; "0" if 0, "1" if 1 :: Number -> String
-		cmp rax, 0
-		je .if_true
-			mov rax, 0x31
-			jmp .end_if 
-		.if_true:
-			mov rax, 0x30 
-		.end_if:
-
-		; PRINTING "0" or "1"
-		; SET COLOR HERE
-		or rax, 0x0400
-		mov [rbx], rax
-
-		add rbx, 2 ; Video buffer counter
-		sub rcx, 1 ; number of bits counter
-		jmp printing_loop
-
-end_print_register:
-	ret
-; ===== End print_register.nasm =====
-
 
 
 RealModeCode:
@@ -296,15 +224,18 @@ RealModeCode:
     mov ax, GDT64.Data
     call set_seg_register          
 
+    ; Clear screen
     mov rbx, 0xb8000
+    ; Print custom string
     mov rsi, MSG_3
     mov r10, 2000
+    ; Execution of a known 64-bit instruction
+    mov rax, 0x12345678
     call print64
 
-    mov rax, [0x00000043]
     hlt
 
-MSG_3 db "Entered Long Mode Group 1", 0
+MSG_3 db "Hello professor! From: Luis, Brendan, Giancarlo, Dheeraj, Joseph, Abdulaziz", 0xA, 0xD
 
 
 times 510 - ($-$$) db 0 
